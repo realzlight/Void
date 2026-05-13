@@ -1,1 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#000000" />
+<title>Void — Talk to strangers</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&family=Geist:wght@300;400;500;600&display=swap');
 
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #000000;
+    --surface:  #0a0a0a;
+    --border:   #1a1a1a;
+    --border2:  #262626;
+    --muted:    #404040;
+    --subtle:   #737373;
+    --text:     #e5e5e5;
+    --white:    #fafafa;
+    --danger:   #ef4444;
+    --radius:   6px;
+    --mono:     'Geist Mono', 'SF Mono', ui-monospace, monospace;
+    --sans:     'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  /* noise grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── Pages ── */
+  .page { display: none; position: relative; z-index: 1; }
+  .page.active { display: flex; flex-direction: column; min-height: 100dvh; }
+
+  /* ── HOMEPAGE ── */
+  #home {
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+  }
+
+  /* top nav */
+  .nav {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0;
+    flex-shrink: 0;
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--white);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-logo-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--white);
+    border-radius: 50%;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.25; transform: scale(0.65); }
+  }
+
+  .nav-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--subtle);
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 100px;
+  }
+
+  .nav-badge b { color: var(--text); font-weight: 500; }
+
+  /* hero */
+  .hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0;
+    padding: 48px 0 32px;
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.1s ease-out forwards;
+  }
+
+  .hero-title {
+    font-family: var(--mono);
+    font-size: clamp(72px, 20vw, 128px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--white);
+    line-height: 0.9;
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s ease-out forwards;
+    /* subtle vertical gradient */
+    background: linear-gradient(180deg, #fff 0%, #666 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-desc {
+    font-size: 15px;
+    color: var(--subtle);
+    max-width: 340px;
+    line-height: 1.7;
+    margin-bottom: 40px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.3s ease-out forwards;
+  }
+
+  .hero-desc span {
+    color: var(--text);
+  }
+
+  /* CTA */
+  .cta-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.4s ease-out forwards;
+  }
+
+  .btn-start {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--white);
+    color: #000;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 12px 28px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+  }
+
+  .btn-start:hover { opacity: 0.88; }
+  .btn-start:active { transform: scale(0.97); }
+
+  .btn-start svg { transition: transform 0.15s; }
+  .btn-start:hover svg { transform: translateX(2px); }
+
+  .cta-hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* features grid */
+  .features {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.5s ease-out forwards;
+    flex-shrink: 0;
+  }
+
+  .feature {
+    background: var(--surface);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-right: 1px solid var(--border);
+  }
+
+  .feature:last-child { border-right: none; }
+
+  .feature-icon {
+    font-family: var(--mono);
+    font-size: 18px;
+    margin-bottom: 2px;
+    opacity: 0.5;
+  }
+
+  .feature-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .feature-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* footer */
+  .footer {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.6s ease-out forwards;
+  }
+
+  .footer-credit {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  .footer-credit span {
+    color: var(--subtle);
+  }
+
+  .footer-credit .heart {
+    color: #ef4444;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 16px;
+  }
+
+  .footer-link {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.15s;
+  }
+
+  .footer-link:hover { color: var(--subtle); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── CHAT PAGE ── */
+  #chat-page {
+    max-width: 640px;
+    margin: 0 auto;
+    height: 100dvh;
+    width: 100%;
+  }
+
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  #logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--white);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    text-decoration: none;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  #logo:hover { opacity: 0.7; }
+
+  #logo span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--white);
+    border-radius: 50%;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  #online-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--subtle);
+    letter-spacing: 0.05em;
+  }
+
+  #online-badge b { color: var(--text); font-weight: 500; }
+
+  #status-bar {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--subtle);
+    font-family: var(--mono);
+    letter-spacing: 0.06em;
+    min-height: 37px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
+  }
+
+  #status-bar.connected { color: var(--text); }
+  #status-bar.waiting   { color: var(--subtle); }
+
+  #status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  #status-dot.connected { background: #22c55e; }
+  #status-dot.waiting   { background: #eab308; animation: blink 1s step-end infinite; }
+  #status-dot.idle      { background: var(--muted); animation: none; }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  #chat-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #chat-messages::-webkit-scrollbar { width: 4px; }
+  #chat-messages::-webkit-scrollbar-track { background: transparent; }
+  #chat-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .msg {
+    max-width: 82%;
+    padding: 9px 13px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    line-height: 1.55;
+    word-break: break-word;
+    animation: fadeUp 0.15s ease-out;
+  }
+
+  .msg.you {
+    align-self: flex-end;
+    background: var(--white);
+    color: #000;
+    border-bottom-right-radius: 2px;
+  }
+
+  .msg.stranger {
+    align-self: flex-start;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border2);
+    border-bottom-left-radius: 2px;
+  }
+
+  .msg.system {
+    align-self: center;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: 0.06em;
+    padding: 4px 0;
+    text-transform: uppercase;
+    border: none;
+    max-width: 100%;
+  }
+
+  #empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: var(--mono);
+    letter-spacing: 0.06em;
+    text-align: center;
+    padding: 32px;
+    user-select: none;
+  }
+
+  #empty-state .big {
+    font-size: 36px;
+    opacity: 0.1;
+    letter-spacing: 0.2em;
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  #empty-state p {
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+
+  #typing-indicator {
+    padding: 0 16px 6px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  #typing-indicator.visible { opacity: 1; }
+
+  .typing-dots { display: flex; gap: 3px; align-items: center; }
+  .typing-dots span {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: dot-bounce 1.2s ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes dot-bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30%            { transform: translateY(-4px); }
+  }
+
+  #input-area {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #input-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  #msg-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--sans);
+    padding: 10px 13px;
+    resize: none;
+    min-height: 42px;
+    max-height: 120px;
+    outline: none;
+    transition: border-color 0.15s;
+    line-height: 1.5;
+    -webkit-appearance: none;
+  }
+
+  #msg-input::placeholder { color: var(--muted); }
+  #msg-input:focus { border-color: var(--border2); box-shadow: 0 0 0 1px var(--border2); }
+
+  #send-btn {
+    width: 42px;
+    height: 42px;
+    background: var(--white);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s, transform 0.1s;
+    color: #000;
+  }
+
+  #send-btn:active { transform: scale(0.94); opacity: 0.8; }
+  #send-btn:disabled { opacity: 0.25; cursor: default; }
+
+  #actions { display: flex; gap: 8px; }
+
+  .btn-chat {
+    flex: 1;
+    padding: 9px 0;
+    border-radius: var(--radius);
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text);
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-chat:active { transform: scale(0.97); }
+
+  .btn-chat.primary {
+    background: var(--white);
+    color: #000;
+    border-color: var(--white);
+  }
+
+  .btn-chat.danger {
+    color: var(--danger);
+    border-color: #2d1212;
+  }
+
+  .btn-chat:disabled { opacity: 0.3; cursor: default; transform: none; }
+
+  /* mobile */
+  @media (max-width: 520px) {
+    .features { grid-template-columns: 1fr; }
+    .feature { border-right: none; border-bottom: 1px solid var(--border); }
+    .feature:last-child { border-bottom: none; }
+    .footer { flex-direction: column; gap: 10px; text-align: center; }
+    .hero-title { font-size: clamp(64px, 25vw, 100px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HOMEPAGE ═══════════════ -->
+<div id="home" class="page active">
+  <nav class="nav">
+    <div class="nav-logo">
+      <div class="nav-logo-dot"></div>
+      Void
+    </div>
+    <div class="nav-badge"><b id="home-online-count">—</b> online</div>
+  </nav>
+
+  <main class="hero">
+    <div class="hero-eyebrow">anonymous · ephemeral · unfiltered</div>
+    <h1 class="hero-title">VOID</h1>
+    <p class="hero-desc">
+      Talk to <span>real strangers</span>. No accounts, no profiles, no history.
+      Every conversation disappears when you leave.
+    </p>
+    <div class="cta-group">
+      <button class="btn-start" id="home-enter-btn">
+        Start talking
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 7H12M8 3L12 7L8 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <span class="cta-hint">no signup required</span>
+    </div>
+  </main>
+
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">◉</div>
+      <div class="feature-label">Anonymous</div>
+      <div class="feature-desc">Zero accounts. Zero tracking. You're just a stranger to them too.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">◈</div>
+      <div class="feature-label">Ephemeral</div>
+      <div class="feature-desc">Messages vanish when the chat ends. Nothing is stored anywhere.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">◎</div>
+      <div class="feature-label">Real</div>
+      <div class="feature-desc">Actual humans. Unexpected conversations. Unscripted moments.</div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-credit">
+      made with <span class="heart">♥</span> by <span>ishan</span> &nbsp;·&nbsp; <span style="letter-spacing:0.05em;">AXIVITY</span>
+    </div>
+    <div class="footer-links">
+      <a href="#" class="footer-link">Privacy</a>
+      <a href="#" class="footer-link">Rules</a>
+    </div>
+  </footer>
+</div>
+
+<!-- ═══════════════ CHAT PAGE ═══════════════ -->
+<div id="chat-page" class="page">
+
+  <div id="header">
+    <button id="logo" onclick="goHome()"><span></span>Void</button>
+    <div id="online-badge"><b id="online-count">0</b> online</div>
+  </div>
+
+  <div id="status-bar">
+    <div id="status-dot" class="idle"></div>
+    <span id="status-text">not connected</span>
+  </div>
+
+  <div id="chat-container">
+    <div id="empty-state">
+      <div class="big">VOID</div>
+      <p>tap new to find a stranger</p>
+    </div>
+    <div id="chat-messages" style="display:none;"></div>
+  </div>
+
+  <div id="typing-indicator">
+    <div class="typing-dots"><span></span><span></span><span></span></div>
+    stranger is typing
+  </div>
+
+  <div id="input-area">
+    <div id="input-row">
+      <textarea
+        id="msg-input"
+        placeholder="message"
+        rows="1"
+        maxlength="2000"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        disabled
+      ></textarea>
+      <button id="send-btn" disabled title="Send">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 8L14 2L9 14L7.5 9L2 8Z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+    <div id="actions">
+      <button class="btn-chat primary" id="btn-new">New</button>
+      <button class="btn-chat" id="btn-skip" disabled>Skip</button>
+      <button class="btn-chat danger" id="btn-leave" disabled>Leave</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Socket.io -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+(function () {
+
+  // ── Page routing ─────────────────────────────────────────────────────────
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  document.getElementById('home-enter-btn').addEventListener('click', () => {
+    showPage('chat-page');
+    // Auto start finding
+    clearChat();
+    socket.emit('find');
+    $btnSkip.disabled = true;
+    $btnLeave.disabled = true;
+    disableChat();
+  });
+
+  window.goHome = function () {
+    if (state === STATE.CHATTING || state === STATE.WAITING) {
+      socket.emit('leave');
+    }
+    clearChat();
+    disableChat();
+    setStatus(STATE.IDLE, 'not connected');
+    $typing.classList.remove('visible');
+    showPage('home');
+  };
+
+  // ── State ────────────────────────────────────────────────────────────────
+  const STATE = { IDLE: 'idle', WAITING: 'waiting', CHATTING: 'chatting' };
+  let state = STATE.IDLE;
+  let typingTimer = null;
+  let isTyping = false;
+  let strangerTypingTimer = null;
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const $chat        = document.getElementById('chat-messages');
+  const $empty       = document.getElementById('empty-state');
+  const $statusBar   = document.getElementById('status-bar');
+  const $statusDot   = document.getElementById('status-dot');
+  const $statusText  = document.getElementById('status-text');
+  const $onlineCount = document.getElementById('online-count');
+  const $homeCount   = document.getElementById('home-online-count');
+  const $msgInput    = document.getElementById('msg-input');
+  const $sendBtn     = document.getElementById('send-btn');
+  const $btnNew      = document.getElementById('btn-new');
+  const $btnSkip     = document.getElementById('btn-skip');
+  const $btnLeave    = document.getElementById('btn-leave');
+  const $typing      = document.getElementById('typing-indicator');
+
+  // ── Socket.io ─────────────────────────────────────────────────────────────
+  const socket = io({ transports: ['websocket', 'polling'] });
+
+  socket.on('connect', () => setStatus(STATE.IDLE, 'not connected'));
+
+  socket.on('disconnect', () => {
+    setStatus(STATE.IDLE, 'disconnected');
+    disableChat();
+    postSystem('— connection lost —');
+  });
+
+  socket.on('online_count', ({ count }) => {
+    $onlineCount.textContent = count;
+    $homeCount.textContent = count;
+  });
+
+  socket.on('waiting', () => {
+    setStatus(STATE.WAITING, 'searching for stranger...');
+    postSystem('— searching —');
+  });
+
+  socket.on('matched', () => {
+    setStatus(STATE.CHATTING, 'connected to stranger');
+    enableChat();
+    postSystem('— connected —');
+    $btnSkip.disabled = false;
+    $btnLeave.disabled = false;
+  });
+
+  socket.on('message', ({ text }) => postMessage('stranger', text));
+
+  socket.on('typing', ({ typing }) => {
+    if (typing) {
+      $typing.classList.add('visible');
+      clearTimeout(strangerTypingTimer);
+      strangerTypingTimer = setTimeout(() => $typing.classList.remove('visible'), 3000);
+    } else {
+      clearTimeout(strangerTypingTimer);
+      $typing.classList.remove('visible');
+    }
+  });
+
+  socket.on('stranger_left', () => {
+    setStatus(STATE.IDLE, 'stranger disconnected');
+    disableChat();
+    postSystem('— stranger has left —');
+    $typing.classList.remove('visible');
+  });
+
+  socket.on('left', () => {
+    setStatus(STATE.IDLE, 'not connected');
+    disableChat();
+  });
+
+  // ── Buttons ───────────────────────────────────────────────────────────────
+  $btnNew.addEventListener('click', () => {
+    clearChat();
+    socket.emit('find');
+    $btnSkip.disabled = true;
+    $btnLeave.disabled = true;
+    disableChat();
+  });
+
+  $btnSkip.addEventListener('click', () => {
+    if (state !== STATE.CHATTING) return;
+    socket.emit('leave');
+    clearChat();
+    $typing.classList.remove('visible');
+    disableChat();
+    setTimeout(() => socket.emit('find'), 100);
+  });
+
+  $btnLeave.addEventListener('click', () => {
+    socket.emit('leave');
+    clearChat();
+    $typing.classList.remove('visible');
+    disableChat();
+    setStatus(STATE.IDLE, 'not connected');
+  });
+
+  // ── Input ─────────────────────────────────────────────────────────────────
+  $msgInput.addEventListener('input', () => {
+    autoResize($msgInput);
+    if (!isTyping) {
+      isTyping = true;
+      socket.emit('typing', { typing: true });
+    }
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      isTyping = false;
+      socket.emit('typing', { typing: false });
+    }, 1500);
+  });
+
+  $msgInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  $sendBtn.addEventListener('click', sendMessage);
+
+  function sendMessage() {
+    const text = $msgInput.value.trim();
+    if (!text || state !== STATE.CHATTING) return;
+    socket.emit('message', { text });
+    postMessage('you', text);
+    $msgInput.value = '';
+    autoResize($msgInput);
+    clearTimeout(typingTimer);
+    isTyping = false;
+    socket.emit('typing', { typing: false });
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function setStatus(newState, text) {
+    state = newState;
+    $statusText.textContent = text;
+    $statusDot.className = '';
+    $statusBar.className = '';
+    if (newState === STATE.CHATTING) {
+      $statusDot.classList.add('connected');
+      $statusBar.classList.add('connected');
+    } else if (newState === STATE.WAITING) {
+      $statusDot.classList.add('waiting');
+      $statusBar.classList.add('waiting');
+    } else {
+      $statusDot.classList.add('idle');
+    }
+  }
+
+  function enableChat() {
+    $msgInput.disabled = false;
+    $sendBtn.disabled = false;
+    $msgInput.focus();
+  }
+
+  function disableChat() {
+    $msgInput.disabled = true;
+    $sendBtn.disabled = true;
+    $btnSkip.disabled = true;
+    $btnLeave.disabled = true;
+  }
+
+  function clearChat() {
+    $chat.innerHTML = '';
+    showChat(false);
+  }
+
+  function showChat(show) {
+    $empty.style.display = show ? 'none' : 'flex';
+    $chat.style.display  = show ? 'flex' : 'none';
+  }
+
+  function postMessage(from, text) {
+    showChat(true);
+    const el = document.createElement('div');
+    el.className = 'msg ' + from;
+    el.textContent = text;
+    $chat.appendChild(el);
+    scrollToBottom();
+  }
+
+  function postSystem(text) {
+    showChat(true);
+    const el = document.createElement('div');
+    el.className = 'msg system';
+    el.textContent = text;
+    $chat.appendChild(el);
+    scrollToBottom();
+  }
+
+  function scrollToBottom() {
+    requestAnimationFrame(() => { $chat.scrollTop = $chat.scrollHeight; });
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  $msgInput.addEventListener('focus', () => setTimeout(scrollToBottom, 300));
+
+})();
+</script>
+</body>
+</html>
