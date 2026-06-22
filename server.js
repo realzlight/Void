@@ -13,7 +13,7 @@ const io = new Server(server, {
 });
 
 app.use(express.json());
-console.log("Loggg")
+console.log("Loggggggggggg")
 // Serve the frontend
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
